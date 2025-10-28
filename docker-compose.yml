@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  singular-finance:
+    build: .
+    container_name: singular-finance
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./charts:/app/charts
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+    command: python examples/exemplo_completo.py
+
+  jupyter:
+    build: .
+    container_name: singular-finance-jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/app
+      - ./notebooks:/app/notebooks
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    command: jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+
+  tests:
+    build: .
+    container_name: singular-finance-tests
+    volumes:
+      - .:/app
+    command: pytest tests/ -v
