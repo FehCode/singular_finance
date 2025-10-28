@@ -30,7 +30,7 @@ class FinancialIndicators:
         self.data = data.copy()
         self._validate_data()
 
-    def _validate_data(self):
+    def _validate_data(self) -> None:
         """Valida se os dados contêm as colunas necessárias."""
         required_columns = [
             "receita_liquida",
@@ -64,8 +64,8 @@ class FinancialIndicators:
                 "Colunas 'lucro_liquido' e 'patrimonio_liquido' são necessárias"
             )
 
-        lucro_liquido = self.data["lucro_liquido"].iloc[-1]
-        patrimonio_liquido = self.data["patrimonio_liquido"].iloc[-1]
+        lucro_liquido = float(self.data["lucro_liquido"].iloc[-1])
+        patrimonio_liquido = float(self.data["patrimonio_liquido"].iloc[-1])
 
         if patrimonio_liquido == 0:
             return 0.0
@@ -86,9 +86,9 @@ class FinancialIndicators:
             or "ativo_total" not in self.data.columns
         ):
             raise ValueError("Colunas 'lucro_liquido' e 'ativo_total' são necessárias")
-
-        lucro_liquido = self.data["lucro_liquido"].iloc[-1]
-        ativo_total = self.data["ativo_total"].iloc[-1]
+        
+        lucro_liquido = float(self.data["lucro_liquido"].iloc[-1])
+        ativo_total = float(self.data["ativo_total"].iloc[-1])
 
         if ativo_total == 0:
             return 0.0
@@ -111,9 +111,9 @@ class FinancialIndicators:
             raise ValueError(
                 "Colunas 'lucro_liquido' e 'receita_liquida' são necessárias"
             )
-
-        lucro_liquido = self.data["lucro_liquido"].iloc[-1]
-        receita_liquida = self.data["receita_liquida"].iloc[-1]
+        
+        lucro_liquido = float(self.data["lucro_liquido"].iloc[-1])
+        receita_liquida = float(self.data["receita_liquida"].iloc[-1])
 
         if receita_liquida == 0:
             return 0.0
@@ -135,8 +135,8 @@ class FinancialIndicators:
         ):
             raise ValueError("Colunas 'ebitda' e 'receita_liquida' são necessárias")
 
-        ebitda = self.data["ebitda"].iloc[-1]
-        receita_liquida = self.data["receita_liquida"].iloc[-1]
+        ebitda = float(self.data["ebitda"].iloc[-1])
+        receita_liquida = float(self.data["receita_liquida"].iloc[-1])
 
         if receita_liquida == 0:
             return 0.0
@@ -160,8 +160,8 @@ class FinancialIndicators:
                 "Colunas 'ativo_circulante' e 'passivo_circulante' são necessárias"
             )
 
-        ativo_circulante = self.data["ativo_circulante"].iloc[-1]
-        passivo_circulante = self.data["passivo_circulante"].iloc[-1]
+        ativo_circulante = float(self.data["ativo_circulante"].iloc[-1])
+        passivo_circulante = float(self.data["passivo_circulante"].iloc[-1])
 
         if passivo_circulante == 0:
             return float("inf")
@@ -185,11 +185,11 @@ class FinancialIndicators:
                 "Colunas 'ativo_circulante' e 'passivo_circulante' são necessárias"
             )
 
-        ativo_circulante = self.data["ativo_circulante"].iloc[-1]
-        passivo_circulante = self.data["passivo_circulante"].iloc[-1]
+        ativo_circulante = float(self.data["ativo_circulante"].iloc[-1])
+        passivo_circulante = float(self.data["passivo_circulante"].iloc[-1])
 
         if "estoque" in self.data.columns:
-            estoque = self.data["estoque"].iloc[-1]
+            estoque = float(self.data["estoque"].iloc[-1])
         else:
             estoque = 0
 
@@ -213,8 +213,8 @@ class FinancialIndicators:
         ):
             raise ValueError("Colunas 'passivo_total' e 'ativo_total' são necessárias")
 
-        passivo_total = self.data["passivo_total"].iloc[-1]
-        ativo_total = self.data["ativo_total"].iloc[-1]
+        passivo_total = float(self.data["passivo_total"].iloc[-1])
+        ativo_total = float(self.data["ativo_total"].iloc[-1])
 
         if ativo_total == 0:
             return 0.0
@@ -238,8 +238,8 @@ class FinancialIndicators:
                 "Colunas 'receita_liquida' e 'ativo_total' são necessárias"
             )
 
-        receita_liquida = self.data["receita_liquida"].iloc[-1]
-        ativo_total = self.data["ativo_total"].iloc[-1]
+        receita_liquida = float(self.data["receita_liquida"].iloc[-1])
+        ativo_total = float(self.data["ativo_total"].iloc[-1])
 
         if ativo_total == 0:
             return 0.0
@@ -266,8 +266,8 @@ class FinancialIndicators:
                 "Colunas 'lucro_liquido' e 'acoes_circulantes' são necessárias"
             )
 
-        lucro_liquido = self.data["lucro_liquido"].iloc[-1]
-        acoes_circulantes = self.data["acoes_circulantes"].iloc[-1]
+        lucro_liquido = float(self.data["lucro_liquido"].iloc[-1])
+        acoes_circulantes = float(self.data["acoes_circulantes"].iloc[-1])
 
         if acoes_circulantes == 0:
             return float("inf")
@@ -299,8 +299,8 @@ class FinancialIndicators:
                 "Colunas 'patrimonio_liquido' e 'acoes_circulantes' são necessárias"
             )
 
-        patrimonio_liquido = self.data["patrimonio_liquido"].iloc[-1]
-        acoes_circulantes = self.data["acoes_circulantes"].iloc[-1]
+        patrimonio_liquido = float(self.data["patrimonio_liquido"].iloc[-1])
+        acoes_circulantes = float(self.data["acoes_circulantes"].iloc[-1])
 
         if acoes_circulantes == 0:
             return float("inf")
@@ -314,7 +314,7 @@ class FinancialIndicators:
 
     def calculate_all_indicators(
         self, preco_acao: Optional[float] = None
-    ) -> Dict[str, float]:
+    ) -> Dict[str, Optional[float]]:
         """
         Calcula todos os indicadores financeiros disponíveis.
 
@@ -378,47 +378,6 @@ class FinancialIndicators:
                 indicators["pb_ratio"] = None
 
         return indicators
-
-
-def calculate_all(
-    data: pd.DataFrame, preco_acao: Optional[float] = None
-) -> Dict[str, float]:
-    """
-    Função utilitária para calcular todos os indicadores financeiros.
-
-    Args:
-        data: DataFrame com dados financeiros
-        preco_acao: Preço da ação para cálculo de múltiplos (opcional)
-
-    Returns:
-        Dicionário com todos os indicadores calculados
-    """
-    calculator = FinancialIndicators(data)
-    return calculator.calculate_all_indicators(preco_acao)
-
-
-def calculate_roe(data: pd.DataFrame) -> float:
-    """Calcula ROE para dados fornecidos."""
-    calculator = FinancialIndicators(data)
-    return calculator.calculate_roe()
-
-
-def calculate_roa(data: pd.DataFrame) -> float:
-    """Calcula ROA para dados fornecidos."""
-    calculator = FinancialIndicators(data)
-    return calculator.calculate_roa()
-
-
-def calculate_margem_liquida(data: pd.DataFrame) -> float:
-    """Calcula Margem Líquida para dados fornecidos."""
-    calculator = FinancialIndicators(data)
-    return calculator.calculate_margem_liquida()
-
-
-def calculate_liquidez_corrente(data: pd.DataFrame) -> float:
-    """Calcula Liquidez Corrente para dados fornecidos."""
-    calculator = FinancialIndicators(data)
-    return calculator.calculate_liquidez_corrente()
 
     def calculate_margem_bruta(self) -> float:
         """
@@ -585,3 +544,44 @@ def calculate_liquidez_corrente(data: pd.DataFrame) -> float:
         if ll == 0:
             return 0.0
         return fco / ll
+
+def calculate_all(
+    data: pd.DataFrame, preco_acao: Optional[float] = None
+) -> Dict[str, Optional[float]]:
+    """
+    Função utilitária para calcular todos os indicadores financeiros.
+
+    Args:
+        data: DataFrame com dados financeiros
+        preco_acao: Preço da ação para cálculo de múltiplos (opcional)
+
+    Returns:
+        Dicionário com todos os indicadores calculados
+    """
+    calculator = FinancialIndicators(data)
+    return calculator.calculate_all_indicators(preco_acao)
+
+
+def calculate_roe(data: pd.DataFrame) -> float:
+    """Calcula ROE para dados fornecidos."""
+    calculator = FinancialIndicators(data)
+    return calculator.calculate_roe()
+
+
+def calculate_roa(data: pd.DataFrame) -> float:
+    """Calcula ROA para dados fornecidos."""
+    calculator = FinancialIndicators(data)
+    return calculator.calculate_roa()
+
+
+def calculate_margem_liquida(data: pd.DataFrame) -> float:
+    """Calcula Margem Líquida para dados fornecidos."""
+    calculator = FinancialIndicators(data)
+    return calculator.calculate_margem_liquida()
+
+
+def calculate_liquidez_corrente(data: pd.DataFrame) -> float:
+    """Calcula Liquidez Corrente para dados fornecidos."""
+    calculator = FinancialIndicators(data)
+    return calculator.calculate_liquidez_corrente()
+ 

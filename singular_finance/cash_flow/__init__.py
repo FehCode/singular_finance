@@ -29,7 +29,7 @@ class CashFlowAnalysis:
         self.data = data.copy()
         self._validate_data()
     
-    def _validate_data(self):
+    def _validate_data(self) -> None:
         """Valida se os dados contêm as colunas necessárias."""
         required_columns = [
             'fluxo_caixa_operacional', 'fluxo_caixa_investimento', 
@@ -231,22 +231,31 @@ class CashFlowAnalysis:
         return resultados
     
     def _calculate_growth_rate(self, series: pd.Series) -> float:
-        """Calcula taxa de crescimento anual."""
+        """Calcula taxa de crescimento anual com proteção contra valores inválidos."""
         if len(series) < 2:
             return 0.0
-        
+
         valores = series.dropna()
         if len(valores) < 2:
             return 0.0
-        
+
         valor_inicial = valores.iloc[0]
         valor_final = valores.iloc[-1]
         anos = len(valores) - 1
-        
-        if valor_inicial == 0 or anos == 0:
+
+        # Proteções contra divisão/raízes inválidas
+        try:
+            if not np.isfinite(valor_inicial) or not np.isfinite(valor_final):
+                return 0.0
+            if valor_inicial <= 0 or anos <= 0:
+                return 0.0
+
+            # Evitar avisos de numpy ao elevar bases negativas a potências fracionárias
+            if valor_inicial > 0 and valor_final > 0:
+                return (valor_final / valor_inicial) ** (1 / anos) - 1
             return 0.0
-        
-        return (valor_final / valor_inicial) ** (1 / anos) - 1
+        except Exception:
+            return 0.0
     
     def _analyze_seasonality(self, series: pd.Series) -> Dict[str, float]:
         """Analisa sazonalidade nos dados."""

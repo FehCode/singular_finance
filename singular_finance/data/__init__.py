@@ -10,7 +10,7 @@ import numpy as np
 import yfinance as yf
 import requests
 from bs4 import BeautifulSoup
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Any, Dict, List, Optional, Union, Tuple, cast
 import warnings
 from datetime import datetime, timedelta
 import time
@@ -69,7 +69,9 @@ class DataCollector:
             if existing_map:
                 data = data.rename(columns=existing_map)
 
-            return data
+            # o objeto retornado por yfinance pode ser tipado dinamicamente;
+            # forçamos o tipo para pd.DataFrame para satisfazer a checagem estática
+            return cast(pd.DataFrame, data)
             
         except Exception as e:
             raise Exception(f"Erro ao coletar dados do Yahoo Finance: {str(e)}")
@@ -91,7 +93,7 @@ class DataCollector:
         """
         try:
             ticker = yf.Ticker(symbol)
-            
+
             if statement_type == "income":
                 data = ticker.financials
             elif statement_type == "balance":
@@ -100,11 +102,11 @@ class DataCollector:
                 data = ticker.cashflow
             else:
                 raise ValueError("statement_type deve ser 'income', 'balance' ou 'cashflow'")
-            
-            if data.empty:
+
+            if getattr(data, "empty", False):
                 raise ValueError(f"Nenhuma demonstração encontrada para {symbol}")
-            
-            return data
+
+            return cast(pd.DataFrame, data)
             
         except Exception as e:
             raise Exception(f"Erro ao coletar demonstrações financeiras: {str(e)}")
@@ -121,21 +123,21 @@ class DataCollector:
         """
         try:
             ticker = yf.Ticker(symbol)
-            info = ticker.info
-            
+            info: Any = ticker.info
+
             # Filtrar informações relevantes
-            relevant_info = {
-                'nome': info.get('longName', ''),
-                'setor': info.get('sector', ''),
-                'industria': info.get('industry', ''),
-                'pais': info.get('country', ''),
-                'funcionarios': info.get('fullTimeEmployees', 0),
-                'website': info.get('website', ''),
-                'descricao': info.get('longBusinessSummary', ''),
-                'moeda': info.get('currency', ''),
-                'mercado': info.get('exchange', '')
+            relevant_info: Dict[str, str] = {
+                'nome': str(info.get('longName', '')),
+                'setor': str(info.get('sector', '')),
+                'industria': str(info.get('industry', '')),
+                'pais': str(info.get('country', '')),
+                'funcionarios': str(info.get('fullTimeEmployees', 0)),
+                'website': str(info.get('website', '')),
+                'descricao': str(info.get('longBusinessSummary', '')),
+                'moeda': str(info.get('currency', '')),
+                'mercado': str(info.get('exchange', ''))
             }
-            
+
             return relevant_info
             
         except Exception as e:
@@ -154,11 +156,11 @@ class DataCollector:
         try:
             ticker = yf.Ticker(symbol)
             dividends = ticker.dividends
-            
-            if dividends.empty:
+
+            if getattr(dividends, "empty", False):
                 return pd.DataFrame()
-            
-            return dividends.to_frame('Dividendos')
+
+            return cast(pd.DataFrame, dividends.to_frame('Dividendos'))
             
         except Exception as e:
             raise Exception(f"Erro ao coletar dados de dividendos: {str(e)}")
@@ -171,7 +173,7 @@ class DataProcessor:
     
     def __init__(self):
         """Inicializa o processador de dados."""
-        pass
+        return None
     
     def clean_financial_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """

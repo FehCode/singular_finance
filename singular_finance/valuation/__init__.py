@@ -30,7 +30,7 @@ class ValuationModels:
         self.data = data.copy()
         self._validate_data()
     
-    def _validate_data(self):
+    def _validate_data(self) -> None:
         """Valida se os dados contêm as colunas necessárias."""
         required_columns = [
             'receita_liquida', 'ebitda', 'lucro_liquido', 
