@@ -5,7 +5,7 @@ Uma biblioteca Python completa para análise financeira corporativa,
 valuation, indicadores financeiros, fluxo de caixa e visualização de dados.
 """
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __author__ = "Singular Finance Team"
 __email__ = "contact@singularfinance.com"
 

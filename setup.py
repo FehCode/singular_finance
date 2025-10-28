@@ -8,12 +8,17 @@ from setuptools import setup, find_packages
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-with open("requirements.txt", "r", encoding="utf-8") as fh:
-    requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+try:
+    with open("requirements.txt", "r", encoding="utf-8") as fh:
+        requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+except FileNotFoundError:
+    # Em ambientes isolados de build a requirements.txt pode não estar disponível.
+    # Para permitir a construção da wheel, fallback para lista vazia.
+    requirements = []
 
 setup(
     name="singular-finance",
-    version="1.0.0",
+    version="1.0.2",
     author="Singular Finance Team",
     author_email="contact@singularfinance.com",
     description="Uma biblioteca Python para análise financeira corporativa, valuation e indicadores",
