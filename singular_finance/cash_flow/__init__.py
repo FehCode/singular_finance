@@ -183,13 +183,13 @@ class CashFlowAnalysis:
         qualidade_fcf = self._analyze_fcf_quality(fcf, fco)
         
         return {
-            'valor_atual': fcf.iloc[-1],
-            'media': fcf_medio,
-            'desvio_padrao': fcf_std,
-            'crescimento_anual': fcf_crescimento,
+            'valor_atual': float(fcf.iloc[-1]) if not pd.isna(fcf.iloc[-1]) else None,
+            'media': float(fcf_medio) if not pd.isna(fcf_medio) else None,
+            'desvio_padrao': float(fcf_std) if not pd.isna(fcf_std) else None,
+            'crescimento_anual': float(fcf_crescimento) if not pd.isna(fcf_crescimento) else None,
             'qualidade': qualidade_fcf,
             'serie_historica': fcf,
-            'capex_medio': capex.mean()
+            'capex_medio': float(capex.mean()) if not pd.isna(capex.mean()) else None
         }
     
     def analyze_cash_flow_statement(self) -> Dict[str, Union[float, pd.DataFrame]]:

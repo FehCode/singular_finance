@@ -1,3 +1,67 @@
+Metadata-Version: 2.4
+Name: singular-finance
+Version: 1.0.0
+Summary: Uma biblioteca Python para análise financeira corporativa, valuation e indicadores
+Home-page: https://github.com/singular-finance/singular-finance
+Author: Singular Finance Team
+Author-email: contact@singularfinance.com
+Project-URL: Bug Reports, https://github.com/singular-finance/singular-finance/issues
+Project-URL: Source, https://github.com/singular-finance/singular-finance
+Project-URL: Documentation, https://singular-finance.readthedocs.io/
+Keywords: finance,valuation,financial-analysis,corporate-finance,indicators
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Financial and Insurance Industry
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Office/Business :: Financial :: Investment
+Classifier: Topic :: Scientific/Engineering :: Mathematics
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.21.0
+Requires-Dist: pandas>=1.3.0
+Requires-Dist: matplotlib>=3.4.0
+Requires-Dist: seaborn>=0.11.0
+Requires-Dist: plotly>=5.0.0
+Requires-Dist: scipy>=1.7.0
+Requires-Dist: scikit-learn>=1.0.0
+Requires-Dist: yfinance>=0.1.70
+Requires-Dist: requests>=2.25.0
+Requires-Dist: beautifulsoup4>=4.9.0
+Requires-Dist: openpyxl>=3.0.0
+Requires-Dist: xlsxwriter>=3.0.0
+Requires-Dist: jupyter>=1.0.0
+Requires-Dist: ipywidgets>=7.6.0
+Requires-Dist: tqdm>=4.62.0
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0; extra == "dev"
+Requires-Dist: pytest-cov>=2.0; extra == "dev"
+Requires-Dist: black>=21.0; extra == "dev"
+Requires-Dist: flake8>=3.8; extra == "dev"
+Requires-Dist: mypy>=0.800; extra == "dev"
+Provides-Extra: docs
+Requires-Dist: sphinx>=4.0; extra == "docs"
+Requires-Dist: sphinx-rtd-theme>=0.5; extra == "docs"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license-file
+Dynamic: project-url
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
 # Singular Finance - Biblioteca de Análise Financeira Corporativa
 
 Singular Finance é uma biblioteca Python completa para análise financeira corporativa, oferecendo ferramentas avançadas para **valuation**, **indicadores financeiros**, **análise fundamentalista**, **análise técnica de ações**, fluxo de caixa, visualização e modelos matemáticos.

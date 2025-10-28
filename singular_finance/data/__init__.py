@@ -52,9 +52,23 @@ class DataCollector:
             if data.empty:
                 raise ValueError(f"Nenhum dado encontrado para {symbol}")
             
-            # Renomear colunas para português
-            data.columns = ['Abertura', 'Máxima', 'Mínima', 'Fechamento', 'Volume', 'Dividendos', 'Split']
-            
+            # Renomear colunas para português quando presentes
+            col_map = {
+                'Open': 'Abertura',
+                'High': 'Máxima',
+                'Low': 'Mínima',
+                'Close': 'Fechamento',
+                'Adj Close': 'Fechamento Ajustado',
+                'Volume': 'Volume',
+                'Dividends': 'Dividendos',
+                'Stock Splits': 'Split'
+            }
+
+            # Aplicar apenas as colunas que existem no DataFrame retornado
+            existing_map = {k: v for k, v in col_map.items() if k in data.columns}
+            if existing_map:
+                data = data.rename(columns=existing_map)
+
             return data
             
         except Exception as e:
