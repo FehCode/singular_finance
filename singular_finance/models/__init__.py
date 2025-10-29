@@ -6,9 +6,23 @@ para análise financeira, incluindo modelos de precificação, otimização
 e análise de risco.
 """
 
+__all__ = [
+    "MathematicalModels",
+    "black_scholes_pricing",
+    "monte_carlo_simulation",
+    "calculate_var",
+    "calculate_rsi",
+    "calculate_macd",
+    "calculate_sma",
+    "calculate_ema",
+    "is_hammer",
+    "is_shooting_star",
+]
+
 import warnings
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
+import joblib
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -36,7 +50,7 @@ class MathematicalModels:
         self.data = data.copy() if data is not None else None
         self.models = {}  # Armazenar modelos treinados
 
-    def black_scholes_option_pricing(
+    def black_scholes(
         self,
         spot_price: float,
         strike_price: float,
@@ -434,6 +448,7 @@ class MathematicalModels:
         target_column: str,
         forecast_horizon: int = 1,
         model_type: str = "random_forest",
+        test_size: float = 0.2,
     ) -> Dict[str, Union[np.ndarray, float]]:
         """
         Previsão usando machine learning.
@@ -443,6 +458,7 @@ class MathematicalModels:
             target_column: Nome da coluna alvo
             forecast_horizon: Horizonte de previsão
             model_type: Tipo do modelo ('random_forest', 'linear')
+            test_size: Proporção do dataset para o conjunto de teste
 
         Returns:
             Dicionário com previsões e métricas
@@ -457,7 +473,7 @@ class MathematicalModels:
         X_scaled = scaler.fit_transform(X)
 
         # Dividir dados
-        split_point = int(len(X_scaled) * 0.8)
+        split_point = int(len(X_scaled) * (1 - test_size))
         X_train, X_test = X_scaled[:split_point], X_scaled[split_point:]
         y_train, y_test = y[:split_point], y[split_point:]
 
@@ -478,6 +494,12 @@ class MathematicalModels:
         # Calcular métricas
         train_rmse = np.sqrt(np.mean((y_train - train_predictions) ** 2))
         test_rmse = np.sqrt(np.mean((y_test - test_predictions) ** 2))
+        train_r2 = model.score(X_train, y_train)
+        test_r2 = model.score(X_test, y_test)
+        train_mae = np.mean(np.abs(y_train - train_predictions))
+        test_mae = np.mean(np.abs(y_test - test_predictions))
+        train_mape = np.mean(np.abs((y_train - train_predictions) / y_train)) * 100
+        test_mape = np.mean(np.abs((y_test - test_predictions) / y_test)) * 100
 
         # Previsão futura (usando último ponto)
         last_features = X_scaled[-1:].reshape(1, -1)
@@ -495,6 +517,12 @@ class MathematicalModels:
             "test_predictions": test_predictions,
             "train_rmse": train_rmse,
             "test_rmse": test_rmse,
+            "train_r2": train_r2,
+            "test_r2": test_r2,
+            "train_mae": train_mae,
+            "test_mae": test_mae,
+            "train_mape": train_mape,
+            "test_mape": test_mape,
             "future_prediction": future_prediction,
             "model_type": model_type,
             "feature_importance": (
@@ -504,8 +532,32 @@ class MathematicalModels:
             ),
         }
 
+    def save_model(self, model_name: str, file_path: str) -> None:
+        """
+        Salva um modelo treinado em um arquivo.
 
-def black_scholes_pricing(
+        Args:
+            model_name: Nome do modelo a ser salvo
+            file_path: Caminho do arquivo para salvar o modelo
+        """
+        if model_name not in self.models:
+            raise ValueError(f"Modelo '{model_name}' não encontrado.")
+
+        joblib.dump(self.models[model_name], file_path)
+
+    def load_model(self, model_name: str, file_path: str) -> None:
+        """
+        Carrega um modelo treinado de um arquivo.
+
+        Args:
+            model_name: Nome do modelo a ser carregado
+            file_path: Caminho do arquivo para carregar o modelo
+        """
+        self.models[model_name] = joblib.load(file_path)
+
+
+
+def black_scholes(
     spot_price: float,
     strike_price: float,
     time_to_maturity: float,
@@ -528,7 +580,7 @@ def black_scholes_pricing(
         Dicionário com preço e gregas
     """
     calculator = MathematicalModels()
-    return calculator.black_scholes_option_pricing(
+    return calculator.black_scholes(
         spot_price,
         strike_price,
         time_to_maturity,
@@ -630,7 +682,19 @@ def is_hammer(
     close_prices: pd.Series,
 ) -> pd.Series:
     """
-    Detecta padrão de candle martelo.
+    Detecta o padrão de candle Martelo (Hammer).
+
+    O padrão de martelo é um sinal de alta que aparece em fundos.
+    É caracterizado por um corpo pequeno e uma longa sombra inferior.
+
+    Args:
+        open_prices: Série de preços de abertura
+        high_prices: Série de preços máximos
+        low_prices: Série de preços mínimos
+        close_prices: Série de preços de fechamento
+
+    Returns:
+        Série booleana indicando a ocorrência do padrão
     """
     body = abs(close_prices - open_prices)
     candle_range = high_prices - low_prices
@@ -645,7 +709,19 @@ def is_shooting_star(
     close_prices: pd.Series,
 ) -> pd.Series:
     """
-    Detecta padrão de estrela cadente.
+    Detecta o padrão de candle Estrela Cadente (Shooting Star).
+
+    O padrão de estrela cadente é um sinal de baixa que aparece em topos.
+    É caracterizado por um corpo pequeno e uma longa sombra superior.
+
+    Args:
+        open_prices: Série de preços de abertura
+        high_prices: Série de preços máximos
+        low_prices: Série de preços mínimos
+        close_prices: Série de preços de fechamento
+
+    Returns:
+        Série booleana indicando a ocorrência do padrão
     """
     body = abs(close_prices - open_prices)
     candle_range = high_prices - low_prices

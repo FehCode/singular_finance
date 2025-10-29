@@ -5,6 +5,15 @@ Este módulo contém classes e funções para cálculo de indicadores financeiro
 essenciais para análise corporativa.
 """
 
+__all__ = [
+    "FinancialIndicators",
+    "calculate_all",
+    "calculate_roe",
+    "calculate_roa",
+    "calculate_margem_liquida",
+    "calculate_liquidez_corrente",
+]
+
 import warnings
 from typing import Dict, List, Optional, Union
 
@@ -45,7 +54,7 @@ class FinancialIndicators:
             col for col in required_columns if col not in self.data.columns
         ]
         if missing_columns:
-            warnings.warn(f"Colunas ausentes: {missing_columns}")
+            raise ValueError(f"Colunas ausentes: {missing_columns}")
 
     def calculate_roe(self) -> float:
         """
@@ -56,19 +65,11 @@ class FinancialIndicators:
         Returns:
             ROE em percentual
         """
-        if (
-            "lucro_liquido" not in self.data.columns
-            or "patrimonio_liquido" not in self.data.columns
-        ):
-            raise ValueError(
-                "Colunas 'lucro_liquido' e 'patrimonio_liquido' são necessárias"
-            )
-
         lucro_liquido = float(self.data["lucro_liquido"].iloc[-1])
         patrimonio_liquido = float(self.data["patrimonio_liquido"].iloc[-1])
 
         if patrimonio_liquido == 0:
-            return 0.0
+            return None
 
         return (lucro_liquido / patrimonio_liquido) * 100
 
@@ -81,17 +82,11 @@ class FinancialIndicators:
         Returns:
             ROA em percentual
         """
-        if (
-            "lucro_liquido" not in self.data.columns
-            or "ativo_total" not in self.data.columns
-        ):
-            raise ValueError("Colunas 'lucro_liquido' e 'ativo_total' são necessárias")
-        
         lucro_liquido = float(self.data["lucro_liquido"].iloc[-1])
         ativo_total = float(self.data["ativo_total"].iloc[-1])
 
         if ativo_total == 0:
-            return 0.0
+            return None
 
         return (lucro_liquido / ativo_total) * 100
 
@@ -104,19 +99,11 @@ class FinancialIndicators:
         Returns:
             Margem líquida em percentual
         """
-        if (
-            "lucro_liquido" not in self.data.columns
-            or "receita_liquida" not in self.data.columns
-        ):
-            raise ValueError(
-                "Colunas 'lucro_liquido' e 'receita_liquida' são necessárias"
-            )
-        
         lucro_liquido = float(self.data["lucro_liquido"].iloc[-1])
         receita_liquida = float(self.data["receita_liquida"].iloc[-1])
 
         if receita_liquida == 0:
-            return 0.0
+            return None
 
         return (lucro_liquido / receita_liquida) * 100
 
@@ -129,17 +116,11 @@ class FinancialIndicators:
         Returns:
             Margem EBITDA em percentual
         """
-        if (
-            "ebitda" not in self.data.columns
-            or "receita_liquida" not in self.data.columns
-        ):
-            raise ValueError("Colunas 'ebitda' e 'receita_liquida' são necessárias")
-
         ebitda = float(self.data["ebitda"].iloc[-1])
         receita_liquida = float(self.data["receita_liquida"].iloc[-1])
 
         if receita_liquida == 0:
-            return 0.0
+            return None
 
         return (ebitda / receita_liquida) * 100
 
@@ -152,19 +133,11 @@ class FinancialIndicators:
         Returns:
             Liquidez corrente
         """
-        if (
-            "ativo_circulante" not in self.data.columns
-            or "passivo_circulante" not in self.data.columns
-        ):
-            raise ValueError(
-                "Colunas 'ativo_circulante' e 'passivo_circulante' são necessárias"
-            )
-
         ativo_circulante = float(self.data["ativo_circulante"].iloc[-1])
         passivo_circulante = float(self.data["passivo_circulante"].iloc[-1])
 
         if passivo_circulante == 0:
-            return float("inf")
+            return None
 
         return ativo_circulante / passivo_circulante
 
@@ -177,14 +150,6 @@ class FinancialIndicators:
         Returns:
             Liquidez seca
         """
-        if (
-            "ativo_circulante" not in self.data.columns
-            or "passivo_circulante" not in self.data.columns
-        ):
-            raise ValueError(
-                "Colunas 'ativo_circulante' e 'passivo_circulante' são necessárias"
-            )
-
         ativo_circulante = float(self.data["ativo_circulante"].iloc[-1])
         passivo_circulante = float(self.data["passivo_circulante"].iloc[-1])
 
@@ -194,7 +159,7 @@ class FinancialIndicators:
             estoque = 0
 
         if passivo_circulante == 0:
-            return float("inf")
+            return None
 
         return (ativo_circulante - estoque) / passivo_circulante
 
@@ -207,17 +172,11 @@ class FinancialIndicators:
         Returns:
             Endividamento total em percentual
         """
-        if (
-            "passivo_total" not in self.data.columns
-            or "ativo_total" not in self.data.columns
-        ):
-            raise ValueError("Colunas 'passivo_total' e 'ativo_total' são necessárias")
-
         passivo_total = float(self.data["passivo_total"].iloc[-1])
         ativo_total = float(self.data["ativo_total"].iloc[-1])
 
         if ativo_total == 0:
-            return 0.0
+            return None
 
         return (passivo_total / ativo_total) * 100
 
@@ -230,23 +189,15 @@ class FinancialIndicators:
         Returns:
             Giro do ativo
         """
-        if (
-            "receita_liquida" not in self.data.columns
-            or "ativo_total" not in self.data.columns
-        ):
-            raise ValueError(
-                "Colunas 'receita_liquida' e 'ativo_total' são necessárias"
-            )
-
         receita_liquida = float(self.data["receita_liquida"].iloc[-1])
         ativo_total = float(self.data["ativo_total"].iloc[-1])
 
         if ativo_total == 0:
-            return 0.0
+            return None
 
         return receita_liquida / ativo_total
 
-    def calculate_pe_ratio(self, preco_acao: float) -> float:
+    def calculate_pe_ratio(self, preco_acao: float) -> Optional[float]:
         """
         Calcula o P/E Ratio (Price-to-Earnings).
 
@@ -258,28 +209,20 @@ class FinancialIndicators:
         Returns:
             P/E ratio
         """
-        if (
-            "lucro_liquido" not in self.data.columns
-            or "acoes_circulantes" not in self.data.columns
-        ):
-            raise ValueError(
-                "Colunas 'lucro_liquido' e 'acoes_circulantes' são necessárias"
-            )
-
         lucro_liquido = float(self.data["lucro_liquido"].iloc[-1])
         acoes_circulantes = float(self.data["acoes_circulantes"].iloc[-1])
 
         if acoes_circulantes == 0:
-            return float("inf")
+            return None
 
         lucro_por_acao = lucro_liquido / acoes_circulantes
 
         if lucro_por_acao == 0:
-            return float("inf")
+            return None
 
         return preco_acao / lucro_por_acao
 
-    def calculate_pb_ratio(self, preco_acao: float) -> float:
+    def calculate_pb_ratio(self, preco_acao: float) -> Optional[float]:
         """
         Calcula o P/B Ratio (Price-to-Book).
 
@@ -291,26 +234,25 @@ class FinancialIndicators:
         Returns:
             P/B ratio
         """
-        if (
-            "patrimonio_liquido" not in self.data.columns
-            or "acoes_circulantes" not in self.data.columns
-        ):
-            raise ValueError(
-                "Colunas 'patrimonio_liquido' e 'acoes_circulantes' são necessárias"
-            )
-
         patrimonio_liquido = float(self.data["patrimonio_liquido"].iloc[-1])
         acoes_circulantes = float(self.data["acoes_circulantes"].iloc[-1])
 
         if acoes_circulantes == 0:
-            return float("inf")
+            return None
 
         valor_contabil_por_acao = patrimonio_liquido / acoes_circulantes
 
         if valor_contabil_por_acao == 0:
-            return float("inf")
+            return None
 
         return preco_acao / valor_contabil_por_acao
+
+    def _calculate_indicator(self, func, *args) -> Optional[float]:
+        """Helper function to calculate an indicator and handle exceptions."""
+        try:
+            return func(*args)
+        except (ValueError, ZeroDivisionError):
+            return None
 
     def calculate_all_indicators(
         self, preco_acao: Optional[float] = None
@@ -324,58 +266,20 @@ class FinancialIndicators:
         Returns:
             Dicionário com todos os indicadores calculados
         """
-        indicators = {}
-
-        try:
-            indicators["roe"] = self.calculate_roe()
-        except (ValueError, ZeroDivisionError):
-            indicators["roe"] = None
-
-        try:
-            indicators["roa"] = self.calculate_roa()
-        except (ValueError, ZeroDivisionError):
-            indicators["roa"] = None
-
-        try:
-            indicators["margem_liquida"] = self.calculate_margem_liquida()
-        except (ValueError, ZeroDivisionError):
-            indicators["margem_liquida"] = None
-
-        try:
-            indicators["margem_ebitda"] = self.calculate_margem_ebitda()
-        except (ValueError, ZeroDivisionError):
-            indicators["margem_ebitda"] = None
-
-        try:
-            indicators["liquidez_corrente"] = self.calculate_liquidez_corrente()
-        except (ValueError, ZeroDivisionError):
-            indicators["liquidez_corrente"] = None
-
-        try:
-            indicators["liquidez_seca"] = self.calculate_liquidez_seca()
-        except (ValueError, ZeroDivisionError):
-            indicators["liquidez_seca"] = None
-
-        try:
-            indicators["endividamento_total"] = self.calculate_endividamento_total()
-        except (ValueError, ZeroDivisionError):
-            indicators["endividamento_total"] = None
-
-        try:
-            indicators["giro_ativo"] = self.calculate_giro_ativo()
-        except (ValueError, ZeroDivisionError):
-            indicators["giro_ativo"] = None
+        indicators = {
+            "roe": self._calculate_indicator(self.calculate_roe),
+            "roa": self._calculate_indicator(self.calculate_roa),
+            "margem_liquida": self._calculate_indicator(self.calculate_margem_liquida),
+            "margem_ebitda": self._calculate_indicator(self.calculate_margem_ebitda),
+            "liquidez_corrente": self._calculate_indicator(self.calculate_liquidez_corrente),
+            "liquidez_seca": self._calculate_indicator(self.calculate_liquidez_seca),
+            "endividamento_total": self._calculate_indicator(self.calculate_endividamento_total),
+            "giro_ativo": self._calculate_indicator(self.calculate_giro_ativo),
+        }
 
         if preco_acao is not None:
-            try:
-                indicators["pe_ratio"] = self.calculate_pe_ratio(preco_acao)
-            except (ValueError, ZeroDivisionError):
-                indicators["pe_ratio"] = None
-
-            try:
-                indicators["pb_ratio"] = self.calculate_pb_ratio(preco_acao)
-            except (ValueError, ZeroDivisionError):
-                indicators["pb_ratio"] = None
+            indicators["pe_ratio"] = self._calculate_indicator(self.calculate_pe_ratio, preco_acao)
+            indicators["pb_ratio"] = self._calculate_indicator(self.calculate_pb_ratio, preco_acao)
 
         return indicators
 
@@ -386,17 +290,10 @@ class FinancialIndicators:
         Returns:
             Margem bruta em percentual
         """
-        if (
-            "lucro_bruto" not in self.data.columns
-            or "receita_liquida" not in self.data.columns
-        ):
-            raise ValueError(
-                "Colunas 'lucro_bruto' e 'receita_liquida' são necessárias"
-            )
         lucro_bruto = self.data["lucro_bruto"].iloc[-1]
         receita_liquida = self.data["receita_liquida"].iloc[-1]
         if receita_liquida == 0:
-            return 0.0
+            return None
         return (lucro_bruto / receita_liquida) * 100
 
     def calculate_margem_operacional(self) -> float:
@@ -406,15 +303,10 @@ class FinancialIndicators:
         Returns:
             Margem operacional em percentual
         """
-        if (
-            "ebit" not in self.data.columns
-            or "receita_liquida" not in self.data.columns
-        ):
-            raise ValueError("Colunas 'ebit' e 'receita_liquida' são necessárias")
         ebit = self.data["ebit"].iloc[-1]
         receita_liquida = self.data["receita_liquida"].iloc[-1]
         if receita_liquida == 0:
-            return 0.0
+            return None
         return (ebit / receita_liquida) * 100
 
     def calculate_payout(self) -> float:
@@ -424,15 +316,10 @@ class FinancialIndicators:
         Returns:
             Payout em percentual
         """
-        if (
-            "dividendos" not in self.data.columns
-            or "lucro_liquido" not in self.data.columns
-        ):
-            raise ValueError("Colunas 'dividendos' e 'lucro_liquido' são necessárias")
         dividendos = self.data["dividendos"].iloc[-1]
         lucro_liquido = self.data["lucro_liquido"].iloc[-1]
         if lucro_liquido == 0:
-            return 0.0
+            return None
         return (dividendos / lucro_liquido) * 100
 
     def calculate_dividend_yield(self, preco_acao: float) -> float:
@@ -442,17 +329,10 @@ class FinancialIndicators:
         Returns:
             Dividend yield em percentual
         """
-        if (
-            "dividendos" not in self.data.columns
-            or "acoes_circulantes" not in self.data.columns
-        ):
-            raise ValueError(
-                "Colunas 'dividendos' e 'acoes_circulantes' são necessárias"
-            )
         dividendos = self.data["dividendos"].iloc[-1]
         acoes = self.data["acoes_circulantes"].iloc[-1]
         if acoes == 0 or preco_acao == 0:
-            return 0.0
+            return None
         dy = (dividendos / acoes) / preco_acao
         return dy * 100
 
@@ -462,12 +342,9 @@ class FinancialIndicators:
         Returns:
             Crescimento em percentual
         """
-        if (
-            "receita_liquida" not in self.data.columns
-            or len(self.data["receita_liquida"]) < 2
-        ):
-            return 0.0
         r = self.data["receita_liquida"]
+        if r.iloc[-2] == 0:
+            return None
         return ((r.iloc[-1] / r.iloc[-2]) - 1) * 100
 
     def calculate_crescimento_lucro(self) -> float:
@@ -476,73 +353,50 @@ class FinancialIndicators:
         Returns:
             Crescimento em percentual
         """
-        if (
-            "lucro_liquido" not in self.data.columns
-            or len(self.data["lucro_liquido"]) < 2
-        ):
-            return 0.0
         l = self.data["lucro_liquido"]
+        if l.iloc[-2] == 0:
+            return None
         return ((l.iloc[-1] / l.iloc[-2]) - 1) * 100
 
     def calculate_roe_cagr(self, anos: int = 3) -> float:
         """
         Calcula o CAGR do ROE nos últimos anos.
         """
-        if (
-            "lucro_liquido" not in self.data.columns
-            or "patrimonio_liquido" not in self.data.columns
-        ):
-            return 0.0
         rs = self.data["lucro_liquido"].tail(anos) / self.data[
             "patrimonio_liquido"
         ].tail(anos)
-        if len(rs) < 2:
-            return 0.0
+        if len(rs) < 2 or rs.iloc[0] == 0:
+            return None
         return ((rs.iloc[-1] / rs.iloc[0]) ** (1 / (len(rs) - 1)) - 1) * 100
 
     def calculate_ebitda_atividade(self) -> float:
         """
         Calcula EBITDA / Receita Líquida (ou margem EBITDA).
         """
-        if (
-            "ebitda" not in self.data.columns
-            or "receita_liquida" not in self.data.columns
-        ):
-            return 0.0
         e = self.data["ebitda"].iloc[-1]
         r = self.data["receita_liquida"].iloc[-1]
         if r == 0:
-            return 0.0
+            return None
         return (e / r) * 100
 
     def calculate_divida_liquida_ebitda(self) -> float:
         """
         Calcula Dívida Líquida / EBITDA
         """
-        if (
-            "divida_liquida" not in self.data.columns
-            or "ebitda" not in self.data.columns
-        ):
-            return 0.0
         d = self.data["divida_liquida"].iloc[-1]
         e = self.data["ebitda"].iloc[-1]
         if e == 0:
-            return 0.0
+            return None
         return d / e
 
     def calculate_qualidade_lucros(self) -> float:
         """
         Proporção Fluxo de Caixa Operacional / Lucro Líquido.
         """
-        if (
-            "fluxo_caixa_operacional" not in self.data.columns
-            or "lucro_liquido" not in self.data.columns
-        ):
-            return 0.0
         fco = self.data["fluxo_caixa_operacional"].iloc[-1]
         ll = self.data["lucro_liquido"].iloc[-1]
         if ll == 0:
-            return 0.0
+            return None
         return fco / ll
 
 def calculate_all(

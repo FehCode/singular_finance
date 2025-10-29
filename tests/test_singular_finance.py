@@ -120,7 +120,7 @@ class TestValuationModels(unittest.TestCase):
             {'ev_revenue': 2.5, 'ev_ebitda': 10.0, 'pe_ratio': 18.0, 'pb_ratio': 2.5}
         ]
         
-        multiples_result = calculator.multiples_analysis(empresas_comparaveis)
+        multiples_result = calculator.comparables_analysis(empresas_comparaveis)
         
         self.assertIsInstance(multiples_result, dict)
         self.assertIn('valor_medio', multiples_result)
@@ -188,7 +188,7 @@ class TestMathematicalModels(unittest.TestCase):
     
     def test_black_scholes_pricing(self):
         """Testa precificação Black-Scholes."""
-        result = self.models.black_scholes_option_pricing(
+        result = self.models.black_scholes(
             spot_price=100,
             strike_price=100,
             time_to_maturity=1.0,

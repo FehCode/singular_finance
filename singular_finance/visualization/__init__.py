@@ -5,6 +5,8 @@ Este módulo contém classes e funções para criação de gráficos e dashboard
 interativos para análise financeira.
 """
 
+__all__ = ["FinancialCharts", "plot_financial_metrics", "plot_revenue_growth", "plot_cash_flow_waterfall", "create_interactive_dashboard"]
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -42,7 +44,8 @@ class FinancialCharts:
         self,
         indicators: Dict[str, float],
         title: str = "Indicadores Financeiros",
-        figsize: Tuple[int, int] = (12, 8)
+        figsize: Tuple[int, int] = (12, 8),
+        colors: Optional[List[str]] = None,
     ) -> plt.Figure:
         """
         Cria gráfico de barras com indicadores financeiros.
@@ -51,6 +54,7 @@ class FinancialCharts:
             indicators: Dicionário com indicadores financeiros
             title: Título do gráfico
             figsize: Tamanho da figura
+            colors: Lista de cores para as barras
             
         Returns:
             Figura matplotlib
@@ -68,7 +72,9 @@ class FinancialCharts:
         values = list(valid_indicators.values())
         
         # Criar gráfico de barras
-        bars = ax.bar(labels, values, color=plt.cm.viridis(np.linspace(0, 1, len(labels))))
+        if colors is None:
+            colors = plt.cm.viridis(np.linspace(0, 1, len(labels)))
+        bars = ax.bar(labels, values, color=colors)
         
         # Personalizar gráfico
         ax.set_title(title, fontsize=16, fontweight='bold')
@@ -92,43 +98,41 @@ class FinancialCharts:
         self,
         revenue_data: pd.Series,
         title: str = "Crescimento da Receita",
-        figsize: Tuple[int, int] = (12, 6)
-    ) -> plt.Figure:
+    ) -> go.Figure:
         """
-        Cria gráfico de crescimento da receita ao longo do tempo.
+        Cria gráfico interativo de crescimento da receita ao longo do tempo usando Plotly.
         
         Args:
             revenue_data: Série temporal com dados de receita
             title: Título do gráfico
-            figsize: Tamanho da figura
             
         Returns:
-            Figura matplotlib
+            Figura Plotly
         """
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=figsize)
+        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1,
+                            subplot_titles=[f'{title} - Valores Absolutos', 'Taxa de Crescimento Anual (%)'])
         
         # Gráfico da receita absoluta
-        ax1.plot(revenue_data.index, revenue_data.values, marker='o', linewidth=2, markersize=6)
-        ax1.set_title(f'{title} - Valores Absolutos', fontsize=14, fontweight='bold')
-        ax1.set_ylabel('Receita (R$)', fontsize=12)
-        ax1.grid(True, alpha=0.3)
+        fig.add_trace(go.Scatter(x=revenue_data.index, y=revenue_data.values, mode='lines+markers', 
+                                 name='Receita Líquida', line=dict(color='blue')),
+                      row=1, col=1)
+        fig.update_yaxes(title_text='Receita (R$)', row=1, col=1)
         
         # Gráfico do crescimento percentual
         growth_rates = revenue_data.pct_change() * 100
-        ax2.bar(growth_rates.index[1:], growth_rates.values[1:], 
-                color='green', alpha=0.7, width=0.8)
-        ax2.set_title('Taxa de Crescimento Anual (%)', fontsize=14, fontweight='bold')
-        ax2.set_ylabel('Crescimento (%)', fontsize=12)
-        ax2.set_xlabel('Período', fontsize=12)
-        ax2.grid(True, alpha=0.3)
+        fig.add_trace(go.Bar(x=growth_rates.index, y=growth_rates.values, 
+                             name='Crescimento Anual', marker_color='green'),
+                      row=2, col=1)
+        fig.update_yaxes(title_text='Crescimento (%)', row=2, col=1)
+        fig.update_xaxes(title_text='Período', row=2, col=1)
         
         # Adicionar linha de crescimento médio
         avg_growth = growth_rates.mean()
-        ax2.axhline(y=avg_growth, color='red', linestyle='--', 
-                   label=f'Crescimento Médio: {avg_growth:.1f}%')
-        ax2.legend()
+        fig.add_hline(y=avg_growth, line_dash="dash", line_color="red", 
+                      annotation_text=f'Crescimento Médio: {avg_growth:.1f}%', 
+                      annotation_position="bottom right", row=2, col=1)
         
-        plt.tight_layout()
+        fig.update_layout(title_text=title, height=700, showlegend=False, template='plotly_white')
         
         # Armazenar figura
         self.figures['revenue_growth'] = fig
@@ -139,50 +143,49 @@ class FinancialCharts:
         self,
         cash_flow_data: Dict[str, float],
         title: str = "Análise de Fluxo de Caixa",
-        figsize: Tuple[int, int] = (10, 8)
-    ) -> plt.Figure:
+    ) -> go.Figure:
         """
-        Cria gráfico waterfall do fluxo de caixa.
+        Cria gráfico waterfall interativo do fluxo de caixa usando Plotly.
         
         Args:
             cash_flow_data: Dicionário com componentes do fluxo de caixa
             title: Título do gráfico
-            figsize: Tamanho da figura
             
         Returns:
-            Figura matplotlib
+            Figura Plotly
         """
-        fig, ax = plt.subplots(figsize=figsize)
-        
         # Preparar dados para waterfall
         components = list(cash_flow_data.keys())
         values = list(cash_flow_data.values())
         
-        # Calcular posições cumulativas
-        cumulative = np.cumsum([0] + values)
+        # Calcular posições cumulativas para o gráfico waterfall
+        # O primeiro valor é o ponto de partida, os demais são as mudanças
+        # O último valor é o total
         
-        # Criar gráfico de barras
-        colors = ['green' if v >= 0 else 'red' for v in values]
-        bars = ax.bar(range(len(components)), values, color=colors, alpha=0.7)
-        
-        # Adicionar linhas de conexão
-        for i in range(len(cumulative) - 1):
-            ax.plot([i, i+1], [cumulative[i], cumulative[i+1]], 'k-', linewidth=2)
-        
-        # Personalizar gráfico
-        ax.set_title(title, fontsize=16, fontweight='bold')
-        ax.set_ylabel('Valor (R$)', fontsize=12)
-        ax.set_xticks(range(len(components)))
-        ax.set_xticklabels(components, rotation=45, ha='right')
-        ax.grid(True, alpha=0.3)
-        
-        # Adicionar valores nas barras
-        for bar, value in zip(bars, values):
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height,
-                   f'{value:,.0f}', ha='center', va='bottom' if height >= 0 else 'top')
-        
-        plt.tight_layout()
+        # Adicionar um total para o gráfico waterfall
+        total = sum(values)
+        components.append("Total")
+        values.append(total)
+
+        # Definir tipo de medida para cada barra
+        measures = ['relative'] * (len(components) - 1) + ['total']
+
+        fig = go.Figure(go.Waterfall(
+            name = "Fluxo de Caixa",
+            orientation = "v",
+            measure = measures,
+            x = components,
+            textposition = "outside",
+            text = [f'{v:,.0f}' for v in values],
+            y = values,
+            connector = {"line": {"color": "rgb(63, 63, 63)"}},
+        ))
+
+        fig.update_layout(
+            title_text=title,
+            showlegend=True,
+            template='plotly_white'
+        )
         
         # Armazenar figura
         self.figures['cash_flow_waterfall'] = fig
@@ -358,6 +361,9 @@ class FinancialCharts:
         Returns:
             Figura matplotlib
         """
+        if not ratios_data:
+            raise ValueError("Nenhum dado de indicador fornecido para plotagem.")
+
         fig, axes = plt.subplots(2, 2, figsize=figsize)
         axes = axes.flatten()
         
@@ -455,7 +461,7 @@ def plot_cash_flow_waterfall(cash_flow_data: Dict[str, float], **kwargs) -> plt.
     return chart.plot_cash_flow_waterfall(cash_flow_data, **kwargs)
 
 
-def create_interactive_dashboard(data: pd.DataFrame, **kwargs) -> go.Figure:
+def plot_interactive_dashboard(data: pd.DataFrame, **kwargs) -> go.Figure:
     """
     Função utilitária para criar dashboard interativo.
     

@@ -5,12 +5,16 @@ Este módulo contém funções utilitárias para análise financeira,
 incluindo cálculos auxiliares, formatação e validações.
 """
 
+__all__ = ["FinancialUtils", "format_currency", "format_percentage", "calculate_cagr", "calculate_npv"]
+
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Union, Tuple, Any
 import warnings
 from datetime import datetime, timedelta
 import re
+from forex_python.converter import CurrencyRates
+from scipy import stats
 
 
 class FinancialUtils:
@@ -145,14 +149,16 @@ class FinancialUtils:
         initial_guess: float = 0.1
     ) -> float:
         """
-        Calcula IRR (Internal Rate of Return).
-        
+        Calcula a Taxa Interna de Retorno (IRR) para uma série de fluxos de caixa.
+
+        A IRR é a taxa de desconto que torna o Valor Presente Líquido (NPV) de todos os fluxos de caixa igual a zero.
+
         Args:
-            cash_flows: Lista com fluxos de caixa
-            initial_guess: Chute inicial para IRR
-            
+            cash_flows: Uma lista de fluxos de caixa (incluindo o investimento inicial como um valor negativo).
+            initial_guess: Uma estimativa inicial para a IRR.
+
         Returns:
-            IRR em decimal
+            A Taxa Interna de Retorno como um float, ou `np.nan` se a solução não puder ser encontrada.
         """
         from scipy.optimize import fsolve
         
@@ -237,11 +243,11 @@ class FinancialUtils:
         downside_returns = returns[returns < 0]
         
         if len(downside_returns) == 0:
-            return float('inf') if excess_returns.mean() > 0 else 0.0
+            return None if excess_returns.mean() <= 0 else np.inf
         
         downside_deviation = downside_returns.std()
         
-        return excess_returns.mean() / downside_deviation if downside_deviation != 0 else 0.0
+        return excess_returns.mean() / downside_deviation if downside_deviation != 0 else None
     
     def calculate_calmar_ratio(
         self,
@@ -386,6 +392,13 @@ class FinancialUtils:
                 if negative_count > 0:
                     validation_results['warnings'].append(f"Coluna '{col}' contém {negative_count} valores negativos")
         
+        # Verificar outliers
+        for col in numeric_columns:
+            z_scores = np.abs(stats.zscore(data[col].dropna()))
+            outliers = z_scores > 3
+            if outliers.any():
+                validation_results['warnings'].append(f"Coluna '{col}' contém {outliers.sum()} outliers potenciais")
+
         # Resumo estatístico
         validation_results['summary'] = {
             'total_rows': len(data),
@@ -411,7 +424,7 @@ class FinancialUtils:
             amount: Valor a ser convertido
             from_currency: Moeda origem
             to_currency: Moeda destino
-            exchange_rate: Taxa de câmbio (opcional)
+            exchange_rate: Taxa de câmbio (opcional, se não fornecida, será obtida online)
             
         Returns:
             Valor convertido
@@ -420,21 +433,11 @@ class FinancialUtils:
             return amount
         
         if exchange_rate is None:
-            # Taxas de câmbio aproximadas (para demonstração)
-            rates = {
-                'USD_BRL': 5.0,
-                'BRL_USD': 0.2,
-                'EUR_BRL': 5.5,
-                'BRL_EUR': 0.18,
-                'GBP_BRL': 6.2,
-                'BRL_GBP': 0.16
-            }
-            
-            rate_key = f"{from_currency}_{to_currency}"
-            if rate_key not in rates:
-                raise ValueError(f"Taxa de câmbio não disponível para {rate_key}")
-            
-            exchange_rate = rates[rate_key]
+            c = CurrencyRates()
+            try:
+                exchange_rate = c.get_rate(from_currency, to_currency)
+            except:
+                raise ValueError(f"Taxa de câmbio não disponível para {from_currency}_{to_currency}")
         
         return amount * exchange_rate
     

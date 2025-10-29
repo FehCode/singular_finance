@@ -13,3 +13,5 @@ xlsxwriter>=3.0.0
 jupyter>=1.0.0
 ipywidgets>=7.6.0
 tqdm>=4.62.0
+joblib>=1.1.0
+forex-python>=1.8

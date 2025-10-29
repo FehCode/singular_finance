@@ -5,9 +5,11 @@ Este módulo contém classes e funções para análise detalhada de fluxos de ca
 incluindo fluxos operacionais, de investimento e de financiamento.
 """
 
+__all__ = ["CashFlowAnalysis", "analyze_cash_flow", "calculate_free_cash_flow"]
+
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Callable, Dict, List, Optional, Union, Tuple
 import warnings
 
 
@@ -40,6 +42,43 @@ class CashFlowAnalysis:
         if missing_columns:
             warnings.warn(f"Colunas ausentes para análise de fluxo de caixa: {missing_columns}")
     
+    def _analyze_cash_flow_component(
+        self, component_name: str, analysis_functions: Dict[str, Callable]
+    ) -> Dict[str, Union[float, pd.Series]]:
+        """
+        Analisa um componente de fluxo de caixa de forma genérica.
+
+        Args:
+            component_name: Nome da coluna do componente de fluxo de caixa
+            analysis_functions: Dicionário de funções de análise específicas do componente
+
+        Returns:
+            Dicionário com a análise do componente
+        """
+        if component_name not in self.data.columns:
+            raise ValueError(f"Coluna '{component_name}' é necessária")
+
+        series = self.data[component_name]
+
+        # Estatísticas básicas
+        mean_value = series.mean()
+        std_value = series.std()
+        growth_rate = self._calculate_growth_rate(series)
+
+        analysis = {
+            "valor_atual": series.iloc[-1],
+            "media": mean_value,
+            "desvio_padrao": std_value,
+            "crescimento_anual": growth_rate,
+            "serie_historica": series,
+        }
+
+        # Análises específicas do componente
+        for name, func in analysis_functions.items():
+            analysis[name] = func(series)
+
+        return analysis
+
     def analyze_operational_cash_flow(self) -> Dict[str, Union[float, pd.Series]]:
         """
         Analisa o fluxo de caixa operacional.
@@ -47,36 +86,15 @@ class CashFlowAnalysis:
         Returns:
             Dicionário com análise do fluxo operacional
         """
-        if 'fluxo_caixa_operacional' not in self.data.columns:
-            raise ValueError("Coluna 'fluxo_caixa_operacional' é necessária")
-        
-        fco = self.data['fluxo_caixa_operacional']
-        
-        # Estatísticas básicas
-        fco_medio = fco.mean()
-        fco_std = fco.std()
-        fco_crescimento = self._calculate_growth_rate(fco)
-        
-        # Análise de tendência
-        tendencia_positiva = (fco.iloc[-1] > fco.iloc[0]) if len(fco) > 1 else False
-        
-        # Volatilidade
-        volatilidade = fco_std / abs(fco_medio) if fco_medio != 0 else 0
-        
-        # Análise de sazonalidade (se houver dados suficientes)
-        sazonalidade = self._analyze_seasonality(fco)
-        
-        return {
-            'valor_atual': fco.iloc[-1],
-            'media': fco_medio,
-            'desvio_padrao': fco_std,
-            'crescimento_anual': fco_crescimento,
-            'tendencia_positiva': tendencia_positiva,
-            'volatilidade': volatilidade,
-            'sazonalidade': sazonalidade,
-            'serie_historica': fco
+        analysis_functions = {
+            "tendencia_positiva": lambda s: (s.iloc[-1] > s.iloc[0]) if len(s) > 1 else False,
+            "volatilidade": lambda s: s.std() / abs(s.mean()) if s.mean() != 0 else 0,
+            "sazonalidade": self._analyze_seasonality,
         }
-    
+        return self._analyze_cash_flow_component(
+            "fluxo_caixa_operacional", analysis_functions
+        )
+
     def analyze_investment_cash_flow(self) -> Dict[str, Union[float, pd.Series]]:
         """
         Analisa o fluxo de caixa de investimento.
@@ -84,36 +102,14 @@ class CashFlowAnalysis:
         Returns:
             Dicionário com análise do fluxo de investimento
         """
-        if 'fluxo_caixa_investimento' not in self.data.columns:
-            raise ValueError("Coluna 'fluxo_caixa_investimento' é necessária")
-        
-        fci = self.data['fluxo_caixa_investimento']
-        
-        # Estatísticas básicas
-        fci_medio = fci.mean()
-        fci_std = fci.std()
-        fci_crescimento = self._calculate_growth_rate(fci)
-        
-        # Análise de intensidade de investimento
-        if 'receita_liquida' in self.data.columns:
-            receita_media = self.data['receita_liquida'].mean()
-            intensidade_investimento = abs(fci_medio) / receita_media if receita_media != 0 else 0
-        else:
-            intensidade_investimento = None
-        
-        # Análise de consistência
-        investimento_consistente = self._analyze_consistency(fci)
-        
-        return {
-            'valor_atual': fci.iloc[-1],
-            'media': fci_medio,
-            'desvio_padrao': fci_std,
-            'crescimento_anual': fci_crescimento,
-            'intensidade_investimento': intensidade_investimento,
-            'investimento_consistente': investimento_consistente,
-            'serie_historica': fci
+        analysis_functions = {
+            "intensidade_investimento": self._analyze_investment_intensity,
+            "investimento_consistente": self._analyze_consistency,
         }
-    
+        return self._analyze_cash_flow_component(
+            "fluxo_caixa_investimento", analysis_functions
+        )
+
     def analyze_financing_cash_flow(self) -> Dict[str, Union[float, pd.Series]]:
         """
         Analisa o fluxo de caixa de financiamento.
@@ -121,35 +117,28 @@ class CashFlowAnalysis:
         Returns:
             Dicionário com análise do fluxo de financiamento
         """
-        if 'fluxo_caixa_financiamento' not in self.data.columns:
-            raise ValueError("Coluna 'fluxo_caixa_financiamento' é necessária")
-        
-        fcf = self.data['fluxo_caixa_financiamento']
-        
-        # Estatísticas básicas
-        fcf_medio = fcf.mean()
-        fcf_std = fcf.std()
-        fcf_crescimento = self._calculate_growth_rate(fcf)
-        
-        # Análise de dependência de financiamento
-        if 'fluxo_caixa_operacional' in self.data.columns:
-            fco_medio = self.data['fluxo_caixa_operacional'].mean()
-            dependencia_financiamento = abs(fcf_medio) / abs(fco_medio) if fco_medio != 0 else 0
-        else:
-            dependencia_financiamento = None
-        
-        # Análise de padrão de financiamento
-        padrao_financiamento = self._analyze_financing_pattern(fcf)
-        
-        return {
-            'valor_atual': fcf.iloc[-1],
-            'media': fcf_medio,
-            'desvio_padrao': fcf_std,
-            'crescimento_anual': fcf_crescimento,
-            'dependencia_financiamento': dependencia_financiamento,
-            'padrao_financiamento': padrao_financiamento,
-            'serie_historica': fcf
+        analysis_functions = {
+            "dependencia_financiamento": self._analyze_financing_dependency,
+            "padrao_financiamento": self._analyze_financing_pattern,
         }
+        return self._analyze_cash_flow_component(
+            "fluxo_caixa_financiamento", analysis_functions
+        )
+
+    def _analyze_investment_intensity(self, series: pd.Series) -> Optional[float]:
+        """Analisa a intensidade do investimento."""
+        if "receita_liquida" in self.data.columns:
+            receita_media = self.data["receita_liquida"].mean()
+            return abs(series.mean()) / receita_media if receita_media != 0 else 0
+        return None
+
+    def _analyze_financing_dependency(self, series: pd.Series) -> Optional[float]:
+        """Analisa a dependência de financiamento."""
+        if "fluxo_caixa_operacional" in self.data.columns:
+            fco_medio = self.data["fluxo_caixa_operacional"].mean()
+            return abs(series.mean()) / abs(fco_medio) if fco_medio != 0 else 0
+        return None
+
     
     def calculate_free_cash_flow(self) -> Dict[str, Union[float, pd.Series]]:
         """
@@ -254,44 +243,67 @@ class CashFlowAnalysis:
             if valor_inicial > 0 and valor_final > 0:
                 return (valor_final / valor_inicial) ** (1 / anos) - 1
             return 0.0
-        except Exception:
+        except (ZeroDivisionError, ValueError, OverflowError):
             return 0.0
     
-    def _analyze_seasonality(self, series: pd.Series) -> Dict[str, float]:
-        """Analisa sazonalidade nos dados."""
-        if len(series) < 12:  # Precisa de pelo menos 1 ano de dados mensais
-            return {'detectada': False, 'intensidade': 0}
-        
+    def _analyze_seasonality(
+        self, series: pd.Series, min_data_points: int = 12, seasonality_threshold: float = 0.2
+    ) -> Dict[str, float]:
+        """
+        Analisa a sazonalidade nos dados de uma série temporal.
+
+        Args:
+            series: A série temporal a ser analisada.
+            min_data_points: O número mínimo de pontos de dados para realizar a análise.
+            seasonality_threshold: O limiar para determinar se a sazonalidade é detectada.
+
+        Returns:
+            Um dicionário contendo se a sazonalidade foi detectada e a intensidade da sazonalidade.
+        """
+        if len(series) < min_data_points:
+            return {"detectada": False, "intensidade": 0}
+
         # Análise simples de sazonalidade
         valores = series.dropna()
         if len(valores) < 4:
-            return {'detectada': False, 'intensidade': 0}
-        
+            return {"detectada": False, "intensidade": 0}
+
         # Calcular coeficiente de variação por trimestre
         q1 = valores[::4].std() / abs(valores[::4].mean()) if valores[::4].mean() != 0 else 0
         q2 = valores[1::4].std() / abs(valores[1::4].mean()) if valores[1::4].mean() != 0 else 0
         q3 = valores[2::4].std() / abs(valores[2::4].mean()) if valores[2::4].mean() != 0 else 0
         q4 = valores[3::4].std() / abs(valores[3::4].mean()) if valores[3::4].mean() != 0 else 0
-        
+
         intensidade = max(q1, q2, q3, q4)
-        
+
         return {
-            'detectada': intensidade > 0.2,
-            'intensidade': intensidade
+            "detectada": intensidade > seasonality_threshold,
+            "intensidade": intensidade,
         }
-    
-    def _analyze_consistency(self, series: pd.Series) -> Dict[str, Union[bool, float]]:
-        """Analisa consistência dos investimentos."""
+
+    def _analyze_consistency(
+        self, series: pd.Series, consistency_threshold: float = 0.5
+    ) -> Dict[str, Union[bool, float]]:
+        """
+        Analisa a consistência de uma série temporal.
+
+        Args:
+            series: A série temporal a ser analisada.
+            consistency_threshold: O limiar para determinar se a série é consistente.
+
+        Returns:
+            Um dicionário contendo se a série é consistente e a volatilidade.
+        """
         valores = series.dropna()
         if len(valores) < 2:
-            return {'consistente': True, 'volatilidade': 0}
-        
+            return {"consistente": True, "volatilidade": 0}
+
         # Calcular coeficiente de variação
         cv = valores.std() / abs(valores.mean()) if valores.mean() != 0 else 0
-        
+
         return {
-            'consistente': cv < 0.5,  # Baixa volatilidade
-            'volatilidade': cv
+            "consistente": cv < consistency_threshold,  # Baixa volatilidade
+            "volatilidade": cv,
         }
     
     def _analyze_financing_pattern(self, series: pd.Series) -> Dict[str, Union[str, float]]:

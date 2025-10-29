@@ -5,6 +5,8 @@ Este módulo contém classes e funções para análise de valuation empresarial,
 incluindo modelos DCF, múltiplos comparáveis e análise de valor intrínseco.
 """
 
+__all__ = ["ValuationModels", "dcf_analysis", "multiples_analysis", "asset_based_valuation"]
+
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Union, Tuple
@@ -48,7 +50,9 @@ class ValuationModels:
         anos_projecao: int = 5,
         margem_ebitda: Optional[float] = None,
         capex_percentual: float = 0.05,
-        variacao_nwc_percentual: float = 0.02
+        variacao_nwc_percentual: float = 0.02,
+        taxa_crescimento_receita: Optional[float] = None,
+        decrescimento_crescimento: float = 0.8,
     ) -> Dict[str, Union[float, pd.DataFrame]]:
         """
         Realiza análise DCF (Discounted Cash Flow).
@@ -60,6 +64,8 @@ class ValuationModels:
             margem_ebitda: Margem EBITDA assumida (se None, usa média histórica)
             capex_percentual: Percentual de CAPEX sobre receita
             variacao_nwc_percentual: Variação percentual do capital de giro
+            taxa_crescimento_receita: Taxa de crescimento da receita (se None, usa média histórica)
+            decrescimento_crescimento: Fator de decrescimento da taxa de crescimento da receita
             
         Returns:
             Dicionário com valor da empresa e projeções
@@ -75,28 +81,29 @@ class ValuationModels:
             else:
                 margem_ebitda = 0.15  # Margem padrão
         
-        # Calcular taxa de crescimento histórica
-        if len(self.data) > 1:
-            crescimento_historico = self._calculate_growth_rate('receita_liquida')
-        else:
-            crescimento_historico = 0.05  # Crescimento padrão
+        # Calcular taxa de crescimento histórica da receita se não fornecida
+        if taxa_crescimento_receita is None:
+            if len(self.data) > 1:
+                taxa_crescimento_receita = self._calculate_growth_rate('receita_liquida')
+            else:
+                taxa_crescimento_receita = 0.05  # Crescimento padrão
         
         # Projeções
         projecoes = []
         receita_projetada = receita_atual
         
         for ano in range(1, anos_projecao + 1):
-            # Crescimento decrescente ao longo dos anos
-            taxa_crescimento_ano = crescimento_historico * (0.8 ** (ano - 1))
+            # A taxa de crescimento da receita diminui ao longo do tempo
+            taxa_crescimento_ano = taxa_crescimento_receita * (decrescimento_crescimento ** (ano - 1))
             receita_projetada *= (1 + taxa_crescimento_ano)
             
             # Calcular EBITDA projetado
             ebitda_projetado = receita_projetada * margem_ebitda
             
-            # Calcular CAPEX
+            # Calcular CAPEX como um percentual da receita
             capex = receita_projetada * capex_percentual
             
-            # Calcular variação do capital de giro
+            # Calcular variação do capital de giro como um percentual da receita
             variacao_nwc = receita_projetada * variacao_nwc_percentual
             
             # Calcular fluxo de caixa livre
@@ -112,12 +119,12 @@ class ValuationModels:
                 'fcf_descontado': fcf / ((1 + taxa_desconto) ** ano)
             })
         
-        # Valor terminal
+        # Calcular o valor terminal usando o modelo de crescimento de Gordon
         ultimo_fcf = projecoes[-1]['fcf']
         valor_terminal = (ultimo_fcf * (1 + taxa_crescimento_perpetuo)) / (taxa_desconto - taxa_crescimento_perpetuo)
         valor_terminal_descontado = valor_terminal / ((1 + taxa_desconto) ** anos_projecao)
         
-        # Valor da empresa
+        # O valor da empresa é a soma dos fluxos de caixa descontados e do valor terminal descontado
         fcf_descontado_total = sum([p['fcf_descontado'] for p in projecoes])
         valor_empresa = fcf_descontado_total + valor_terminal_descontado
         
@@ -153,7 +160,7 @@ class ValuationModels:
         
         return (valor_final / valor_inicial) ** (1 / anos) - 1
     
-    def multiples_analysis(
+    def comparables_analysis(
         self,
         empresas_comparaveis: List[Dict[str, Union[str, float]]],
         preco_acao_atual: Optional[float] = None
@@ -272,47 +279,40 @@ class ValuationModels:
     
     def sensitivity_analysis(
         self,
-        taxa_desconto_base: float,
-        taxa_crescimento_base: float,
-        variacao_taxa_desconto: float = 0.02,
-        variacao_crescimento: float = 0.01
+        dcf_parameters: Dict[str, float],
+        sensitivity_variables: Dict[str, Tuple[float, float]],
     ) -> pd.DataFrame:
         """
         Análise de sensibilidade do modelo DCF.
-        
+
         Args:
-            taxa_desconto_base: Taxa de desconto base
-            taxa_crescimento_base: Taxa de crescimento base
-            variacao_taxa_desconto: Variação na taxa de desconto
-            variacao_crescimento: Variação na taxa de crescimento
-            
+            dcf_parameters: Dicionário com os parâmetros base para a análise DCF.
+            sensitivity_variables: Dicionário com as variáveis para a análise de sensibilidade e seus intervalos.
+
         Returns:
-            DataFrame com análise de sensibilidade
+            DataFrame com a análise de sensibilidade.
         """
         resultados = []
-        
-        # Variações na taxa de desconto
-        for i in range(-2, 3):
-            taxa_desconto = taxa_desconto_base + (i * variacao_taxa_desconto)
-            
-            # Variações na taxa de crescimento
-            for j in range(-2, 3):
-                taxa_crescimento = taxa_crescimento_base + (j * variacao_crescimento)
-                
-                try:
-                    dcf_result = self.dcf_analysis(
-                        taxa_desconto=taxa_desconto,
-                        taxa_crescimento_perpetuo=taxa_crescimento
-                    )
-                    
-                    resultados.append({
-                        'taxa_desconto': taxa_desconto,
-                        'taxa_crescimento': taxa_crescimento,
-                        'valor_empresa': dcf_result['valor_empresa']
-                    })
-                except:
-                    continue
-        
+
+        # Gerar todas as combinações de parâmetros
+        from itertools import product
+
+        param_names = list(sensitivity_variables.keys())
+        param_ranges = [np.linspace(start, end, 5) for start, end in sensitivity_variables.values()]
+
+        for param_combination in product(*param_ranges):
+            params = dcf_parameters.copy()
+            for i, param_name in enumerate(param_names):
+                params[param_name] = param_combination[i]
+
+            try:
+                dcf_result = self.dcf_analysis(**params)
+                result_row = {param_name: params[param_name] for param_name in param_names}
+                result_row["valor_empresa"] = dcf_result["valor_empresa"]
+                resultados.append(result_row)
+            except:
+                continue
+
         return pd.DataFrame(resultados)
 
 
@@ -338,7 +338,7 @@ def dcf_analysis(
     return calculator.dcf_analysis(taxa_desconto, taxa_crescimento_perpetuo, anos_projecao)
 
 
-def multiples_analysis(
+def comparables_analysis(
     data: pd.DataFrame,
     empresas_comparaveis: List[Dict[str, Union[str, float]]],
     preco_acao_atual: Optional[float] = None
@@ -355,7 +355,7 @@ def multiples_analysis(
         Dicionário com resultado da análise por múltiplos
     """
     calculator = ValuationModels(data)
-    return calculator.multiples_analysis(empresas_comparaveis, preco_acao_atual)
+    return calculator.comparables_analysis(empresas_comparaveis, preco_acao_atual)
 
 
 def asset_based_valuation(data: pd.DataFrame) -> Dict[str, float]:
